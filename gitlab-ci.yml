@@ -1,0 +1,57 @@
+image: docker:latest
+
+services:
+  - docker:dind
+
+variables:
+  LATEST_VER_FRONT: tiverons/workshop-ci-entrega-02:front-latest
+  LATEST_VER_BACK: tiverons/workshop-ci-entrega-02:back-latest
+
+stages:          
+  - build
+  - test
+  - publish
+
+build-frontend:
+  stage: build
+  script:
+    - echo "Building Frontend..."
+    - docker build -f frontend/Dockerfile frontend
+    - echo "Build complete."
+
+build-backend:
+    stage: build
+    script:
+    - echo "Building Backend..."
+    - docker build -f backend/Dockerfile backend
+    - echo "Build complete."
+
+test-frontend:
+  stage: test
+  image: docker/compose:latest
+  script:
+    - echo "Running Frontend tests..."
+    - docker-compose run --entrypoint "npm run test" frontend
+    - echo "Complete Frontend tests"
+
+test-backend:
+  stage: test
+  image: docker/compose:latest
+  script:
+    - echo "Running Backend tests..."
+    - docker-compose run --entrypoint "npm run unittest" backend
+    - echo "Complete Backend tests"
+
+publish-frontend:
+  stage: publish
+  script:
+    - docker build -t $LATEST_VER_FRONT frontend
+    - echo "$REGISTRY_PASSWORD" | docker login -u "$REGISTRY_USER" --password-stdin
+    - docker push $LATEST_VER_FRONT && docker image rm $LATEST_VER_FRONT
+
+publish-backend:
+  stage: publish
+  script:
+    - docker build -t $LATEST_VER_BACK backend
+    - echo "$REGISTRY_PASSWORD" | docker login -u "$REGISTRY_USER" --password-stdin
+    - docker push $LATEST_VER_BACK && docker image rm $LATEST_VER_BACK
